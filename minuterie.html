@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Minuterie</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+canvas {
+    border:1px solid #d3d3d3;
+    background-color: #ffffff;
+}
+</style>
+</head>
+<body onload="startAlarmClock()">
+<script>
+
+// The first function that the webpage will run
+function startAlarmClock() {	
+
+	// Initialize the alarm clock
+	myAlarm.initialize();
+
+	// Start the display buffer
+	myBufferArea.start();
+	myBufferArea.clear();
+	
+	// Star the main display
+	myDisplayArea.start();
+}
+
+// The display buffer
+var myBufferArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = 480;
+        this.canvas.height = 270;
+        this.context = this.canvas.getContext("2d");        
+        },
+    clear : function() {
+		this.context.fillStyle = "#FFFFFF"
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+// The main display
+var myDisplayArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = 480;
+        this.canvas.height = 270;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        
+		// Request updates every 80 milliseconds
+		this.interval = setInterval(updateDisplayArea, 80);
+        },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+// The alarm object
+var myAlarm = {
+	the_alarm : new Date(),
+	state : 0,
+	animation_state : 0,
+	myAudio : new Audio("audio_clip.m4a"),
+	initialize : function() {
+		// Make the default alarm 15 minutes from now
+		this.the_alarm.setMinutes(this.the_alarm.getMinutes() + 15);
+		this.the_alarm.setSeconds(0);
+	},
+	set_state : function(new_state) {
+		this.state = new_state;
+	},
+	increase_hour : function() {
+		this.the_alarm.setHours(this.the_alarm.getHours() + 1);
+	},
+	decrease_hour : function() {
+		this.the_alarm.setHours(this.the_alarm.getHours() - 1);
+	},
+	increase_minute : function() {
+		this.the_alarm.setMinutes(this.the_alarm.getMinutes() + 1);
+	},
+	decrease_minute : function() {
+		this.the_alarm.setMinutes(this.the_alarm.getMinutes() - 1);
+	},
+	increase_second: function() {
+		this.the_alarm.setSeconds(this.the_alarm.getSeconds() + 1);
+	},
+	decrease_second: function() {
+		this.the_alarm.setSeconds(this.the_alarm.getSeconds() - 1);
+	},
+	display : function() {
+		ctx = myBufferArea.context;  
+	
+		// Get the current time		
+		myText = "Heure de l'alarme: " + this.the_alarm.getHours() + ":" + leading_zero(this.the_alarm.getMinutes()) + ":" + leading_zero(this.the_alarm.getSeconds());
+	
+		// Draw it to the buffer
+		ctx.font = "32px Arial";
+		ctx.fillStyle = "Red";
+		ctx.fillText(myText, 20, 160);
+		
+		if (this.state == 1) {
+			
+			// Get the difference in the alarm time and current time
+			temp = this.the_alarm.getTime() - (new Date()).getTime();
+						
+			if (temp >= 0.0) {
+				// Display the countdown
+				myText = "Temps restant: " + Math.floor(temp / 1000 / 3600) + ":" + leading_zero(Math.floor(temp / 1000 / 60 - Math.floor(temp / 1000 / 3600) * 60)) + ":" + leading_zero(Math.round(temp / 1000 - Math.floor(temp / 1000 / 60) * 60));
+				ctx.fillText(myText, 20, 200);
+				
+				this.animation_state = 1;
+			}
+			else {
+				// The alarm is done
+				if (this.animation_state == 1) {
+					// Do some animation, play a sound
+					if (this.myAudio.paused) {
+						this.myAudio.play();
+					}
+					// Set state
+					this.animation_state = 0;
+				}
+				
+				this.state = 2;
+			}
+		}
+		else if (this.state == 2) {
+			// Text showing done
+			myText = "Fini!"
+			ctx.fillText(myText, 20, 200);					
+		}			
+				
+	}
+}
+
+// Helper function to add leading zeros (used for minutes and seconds)
+function leading_zero(in_val) {
+	if (in_val < 10) {
+		return "0" + in_val;
+	}
+	else {
+		return in_val.toString();
+	}
+}
+
+// Called every 80 ms to update the display
+function updateDisplayArea() {    
+	
+	// Clear the buffer area
+    myBufferArea.clear();
+	ctx = myBufferArea.context;  
+	
+	// Get the current time
+	current_time = new Date();	
+	myText = "Heure actuelle: " + current_time.getHours() + ":" + leading_zero(current_time.getMinutes()) + ":" + leading_zero(current_time.getSeconds());
+	
+	// Draw it to the buffer
+	ctx.font = "32px Arial";
+    ctx.fillStyle = "Black";
+    ctx.fillText(myText, 20, 120);
+	
+	// Draw the alarm
+	myAlarm.display();
+    
+	// Clear the main display
+	ctx = myDisplayArea.context;
+	myDisplayArea.clear();	
+	// Draw from the buffer
+	ctx.drawImage(myBufferArea.canvas, 0, 0);
+}
+
+</script>
+<br>
+
+<button onmouseup="myAlarm.increase_hour()">HEURE+</button>
+<button onmouseup="myAlarm.decrease_hour()">HEURE-</button>
+<button onmouseup="myAlarm.increase_minute()">MINUTE+</button>
+<button onmouseup="myAlarm.decrease_minute()">MINUTE-</button>
+ &nbsp;&nbsp;&nbsp;<button onmouseup="myAlarm.set_state(1)">COMMENCE</button>
+ <button onmouseup="myAlarm.set_state(0)">ARRÊTE</button>
+
+</body>
+</html>
